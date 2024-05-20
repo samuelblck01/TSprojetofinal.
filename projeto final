@@ -1,0 +1,281 @@
+abstract class Item {
+    protected nome: string;
+    protected descricao: string;
+
+    constructor(nome: string, descricao: string) {
+        this.nome = nome;
+        this.descricao = descricao;
+    }
+
+    abstract aplicarBeneficios(personagem: Personagem): void;
+
+    getNome(): string {
+        return this.nome;
+    }
+}
+
+class ItemInventario {
+    private quantidade: number;
+    private item: Item;
+
+    constructor(quantidade: number, item: Item) {
+        this.quantidade = quantidade;
+        this.item = item;
+    }
+
+    getItem(): Item {
+        return this.item;
+    }
+
+    incrementarQuantidade(): void {
+        this.quantidade++;
+    }
+
+    decrementarQuantidade(): void {
+        this.quantidade--;
+    }
+
+    getQuantidade(): number {
+        return this.quantidade;
+    }
+}
+
+class Arma extends Item {
+    constructor(nome: string, descricao: string) {
+        super(nome, descricao);
+    }
+
+    aplicarBeneficios(personagem: Personagem): void {
+        personagem.atualizarAtaque(10);
+        personagem.atualizarDefesa(5);
+    }
+}
+
+class Porcao extends Item {
+    constructor(nome: string, descricao: string) {
+        super(nome, descricao);
+    }
+
+    aplicarBeneficios(personagem: Personagem): void {
+        const hpRestaurado = personagem.getMaxHP() * 0.5;
+        const mpRestaurado = personagem.getMaxMP() * 0.2;
+
+        personagem.restaurarHP(hpRestaurado);
+        personagem.restaurarMP(mpRestaurado);
+    }
+}
+
+class Inventario {
+    private array: ItemInventario[];
+    private quantidadeMaximaItens: number;
+
+    constructor(quantidadeMaximaItens: number) {
+        this.array = [];
+        this.quantidadeMaximaItens = quantidadeMaximaItens;
+    }
+
+    adicionarItem(item: ItemInventario): void {
+        const itemExistente = this.array.find(i => i.getItem() === item.getItem());
+
+        if (itemExistente) {
+            itemExistente.incrementarQuantidade();
+        } else {
+            if (this.array.length >= this.quantidadeMaximaItens) {
+                throw new InventarioLimiteException("O inventário está cheio.");
+            }
+            this.array.push(item);
+        }
+    }
+
+    removerItem(item: ItemInventario): void {
+        const index = this.array.findIndex(i => i.getItem() === item.getItem());
+        if (index !== -1) {
+            this.array[index].decrementarQuantidade();
+            if (this.array[index].getQuantidade() <= 0) {
+                this.array.splice(index, 1);
+            }
+        }
+    }
+
+    getItens(): ItemInventario[] {
+        return this.array;
+    }
+
+    getTotalItens(): number {
+        return this.array.reduce((total, item) => total + item.getQuantidade(), 0);
+    }
+
+    getQuantidadeMaximaItens(): number {
+        return this.quantidadeMaximaItens;
+    }
+}
+
+class InventarioLimiteException extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'InventarioLimiteException';
+    }
+}
+
+class ItemMenu {
+    private opcao: number;
+    private textoOpcao: string;
+
+    constructor(opcao: number, textoOpcao: string) {
+        this.opcao = opcao;
+        this.textoOpcao = textoOpcao;
+    }
+
+    getOpcao(): number {
+        return this.opcao;
+    }
+
+    getTextoOpcao(): string {
+        return this.textoOpcao;
+    }
+}
+
+class Menu {
+    private itensMenu: ItemMenu[];
+
+    constructor(itensMenu: ItemMenu[]) {
+        this.itensMenu = itensMenu;
+    }
+
+    imprimirMenu(): number {
+        this.itensMenu.forEach((item, index) => {
+            console.log(`${index + 1}. ${item.getTextoOpcao()}`);
+        });
+
+        const opcaoSelecionada = parseInt(prompt("Selecione uma opção: ") || "");
+
+        if (isNaN(opcaoSelecionada) || opcaoSelecionada < 0 || opcaoSelecionada > this.itensMenu.length) {
+            console.log("Opção inválida. Por favor, selecione novamente.");
+            return this.imprimirMenu();
+        }
+
+        return opcaoSelecionada;
+    }
+}
+
+class Personagem {
+    listarPocoes() {
+        throw new Error("Method not implemented.");
+    }
+    listarArmas() {
+        throw new Error("Method not implemented.");
+    }
+    private nome: string;
+    private HP: number;
+    private MP: number;
+    private forca: number;
+    private defesa: number;
+    private maxHP: number;
+    private maxMP: number;
+    private inventario: Inventario;
+    private arma: Arma | null;
+
+    constructor(nome: string, HP: number, MP: number, forca: number, defesa: number) {
+        this.nome = nome;
+        this.HP = HP;
+        this.MP = MP;
+        this.forca = forca;
+        this.defesa = defesa;
+        this.maxHP = HP;
+        this.maxMP = MP;
+        this.inventario = new Inventario(10); 
+        this.arma = null; 
+
+    }
+    
+
+    atualizarAtaque(valor: number): void {
+        this.forca += valor;
+    }
+
+    atualizarDefesa(valor: number): void {
+        this.defesa += valor;
+    }
+
+    restaurarHP(valor: number): void {
+        this.HP += valor;
+        if (this.HP > this.maxHP) {
+            this.HP = this.maxHP;
+        }
+    }
+
+    restaurarMP(valor: number): void {
+        this.MP += valor;
+        if (this.MP > this.maxMP) {
+            this.MP = this.maxMP;
+        }
+    }
+
+    getMaxHP(): number {
+        return this.maxHP;
+    }
+
+    getMaxMP(): number {
+        return this.maxMP;
+    }
+
+    usarItem(item: ItemInventario): void {
+        if (item.getItem() instanceof Porcao) {
+            this.inventario.removerItem(item);
+        } else if (item.getItem() instanceof Arma) {
+            this.arma = item.getItem();
+        }
+    }
+
+    exibirInformacoes(): void {
+        console.log(`Nome: ${this.nome}`);
+        console.log(`HP: ${this.HP}`);
+        console.log(`MP: ${this.MP}`);
+        console.log(`Força: ${this.forca}`);
+        console.log(`Defesa: ${this.defesa}`);
+        console.log(`Arma: ${this.arma ? this.arma.getNome() : 'Nenhuma'}`);
+    }
+
+    desequiparArma(): void {
+        this.arma = null;
+    }
+}
+
+const menu = new Menu([
+    new ItemMenu(1, "Equipar Arma"),
+    new ItemMenu(2, "Tomar Poção"),
+    new ItemMenu(3, "Adicionar Poção ao inventário"),
+    new ItemMenu(4, "Adicionar Porção ao inventário"),
+    new ItemMenu(5, "Imprimir Informações do Personagem"),
+    new ItemMenu(6, "Desequipar Arma"),
+    new ItemMenu(0, "Sair")
+]);
+
+const personagem = new Personagem("Herói", 100, 50, 20, 10);
+
+while (true) {
+    const opcao = menu.imprimirMenu();
+    switch (opcao) {
+        case 0:
+            console.log("Saindo da aplicação...");
+            // process.exit(0);
+            break;
+        case 1:
+            personagem.listarArmas();
+           
+            break;
+        case 2:
+            personagem.listarPocoes();
+            
+        case 5:
+            personagem.exibirInformacoes();
+            break;
+        case 6:
+            personagem.desequiparArma();
+            console.log("Arma desequipada.");
+            break;
+        default:
+            console.log("Opção inválida. Por favor, selecione novamente.");
+            break;
+    }
+}
